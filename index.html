@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="utf-8">
   <base href="https://cdn.jsdelivr.net/gh/bubbls/youtube-playables@1b8d5d149e9498d3ea95aad1037d1411511d41d3/magic-tiles-3/">
-  <title>PI Playables</title>
+  <title>Magic Tiles 3</title>
   <script src="https://cdn.jsdelivr.net/gh/bubbls/youtube-playables@main/ytgame.js" nonce="4eHT7UXCvu0lKrKpiCZYiQ"></script>
   <meta name="viewport"
     content="width=device-width,user-scalable=no,initial-scale=1, minimum-scale=1,maximum-scale=1" />
@@ -63,49 +62,65 @@
     }
   </style>
 </head>
-
 <body>
   <div id="splash">
-    <img id="splash-logo" src="logo_expanded.jpeg" alt="Amanotes Logo">
+    <img id="splash-logo" src="logo_expanded.jpeg" alt="Magic Tiles 3">
   </div>
+
   <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+
   <script src="src/settings.js" charset="utf-8" nonce="4eHT7UXCvu0lKrKpiCZYiQ"></script>
   <%=webDebugger%>
-    <script src="main.js" charset="utf-8" nonce="4eHT7UXCvu0lKrKpiCZYiQ"></script>
 
-    <script type="text/javascript" nonce="4eHT7UXCvu0lKrKpiCZYiQ">
-      (function () {
-        if (typeof VConsole !== 'undefined') {
-          window.vConsole = new VConsole();
-        }
+  <script>
+    (function () {
+      var localBase = window.location.href.split("?")[0].split("#")[0];
+      var customizer = document.createElement("script");
+      customizer.src = new URL("customizer.js", localBase).href;
+      customizer.onload = function () {
+        startGame();
+      };
+      customizer.onerror = function () {
+        startGame();
+      };
+      document.head.appendChild(customizer);
 
-        var debug = window._CCSettings.debug;
-        var splash = document.getElementById('splash');
-        splash.style.display = 'block';
-
-        function loadScript(moduleName, cb) {
-          function scriptLoaded() {
-            document.body.removeChild(domScript);
-            domScript.removeEventListener('load', scriptLoaded, false);
-            cb && cb();
+      function startGame() {
+        var mainScript = document.createElement("script");
+        mainScript.src = new URL("main.js", localBase).href;
+        mainScript.onload = function () {
+          var debug = window._CCSettings.debug;
+          var gameScript = document.createElement("script");
+          gameScript.src = debug ? "cocos2d-js.js" : "cocos2d-js-min.js";
+          gameScript.async = true;
+          gameScript.onload = function () {
+            if (typeof CC_PHYSICS_BUILTIN !== "undefined" &&
+                (CC_PHYSICS_BUILTIN || CC_PHYSICS_CANNON)) {
+              var physicsScript = document.createElement("script");
+              physicsScript.src = debug ? "physics.js" : "physics-min.js";
+              physicsScript.async = true;
+              physicsScript.onload = function () {
+                window.boot();
+              };
+              physicsScript.onerror = function () {
+                window.boot();
+              };
+              document.body.appendChild(physicsScript);
+            } else {
+              window.boot();
+            }
           };
-          var domScript = document.createElement('script');
-          domScript.async = true;
-          domScript.src = moduleName;
-          domScript.addEventListener('load', scriptLoaded, false);
-          document.body.appendChild(domScript);
-        }
-
-        loadScript(debug ? 'cocos2d-js.js' : 'cocos2d-js-min.js', function () {
-          if (CC_PHYSICS_BUILTIN || CC_PHYSICS_CANNON) {
-            loadScript(debug ? 'physics.js' : 'physics-min.js', window.boot);
-          }
-          else {
-            window.boot();
-          }
-        });
-      })();
-    </script>
+          gameScript.onerror = function () {
+            console.error("Could not load the Cocos engine.");
+          };
+          document.body.appendChild(gameScript);
+        };
+        mainScript.onerror = function () {
+          console.error("Could not load main.js from this repository.");
+        };
+        document.body.appendChild(mainScript);
+      }
+    })();
+  </script>
 </body>
-
 </html>
