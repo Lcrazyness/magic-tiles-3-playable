@@ -68,6 +68,47 @@
   </div>
   <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
   <script src="src/settings.js" charset="utf-8" nonce="4eHT7UXCvu0lKrKpiCZYiQ"></script>
+  <script type="text/javascript" nonce="4eHT7UXCvu0lKrKpiCZYiQ">
+    (function () {
+      // Fallback for content folders not included in this repo's local copy.
+      // Everything else (including the local, edited assets/mt3 bundle) still
+      // loads locally; only these four paths get redirected to the CDN.
+      var CDN_BASE = "https://cdn.jsdelivr.net/gh/bubbls/youtube-playables@1b8d5d149e9498d3ea95aad1037d1411511d41d3/magic-tiles-3/";
+      var MISSING_PREFIXES = [
+        "game-resources/avatars",
+        "game-resources/themes",
+        "game-resources/levels",
+        "game-resources/frames"
+      ];
+      function findPrefixIndex(url) {
+        var best = -1;
+        for (var i = 0; i < MISSING_PREFIXES.length; i++) {
+          var idx = url.indexOf(MISSING_PREFIXES[i]);
+          if (idx !== -1 && (best === -1 || idx < best)) best = idx;
+        }
+        return best;
+      }
+      function rewrite(url) {
+        if (typeof url !== "string" || /^https?:\/\//.test(url)) return url;
+        var idx = findPrefixIndex(url);
+        if (idx === -1) return url;
+        return CDN_BASE + url.slice(idx);
+      }
+      var origOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (method, url) {
+        var args = Array.prototype.slice.call(arguments);
+        args[1] = rewrite(url);
+        return origOpen.apply(this, args);
+      };
+      if (window.fetch) {
+        var origFetch = window.fetch;
+        window.fetch = function (input, init) {
+          if (typeof input === "string") input = rewrite(input);
+          return origFetch.call(this, input, init);
+        };
+      }
+    })();
+  </script>
   <%=webDebugger%>
     <script src="main.js" charset="utf-8" nonce="4eHT7UXCvu0lKrKpiCZYiQ"></script>
 
