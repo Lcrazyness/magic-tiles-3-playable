@@ -60,6 +60,23 @@
       height: 100%;
     }
   </style>
+
+<style id="mt3-custom-css">
+#mt3-custom-settings{position:fixed;right:16px;top:16px;z-index:99999;width:46px;height:46px;border:0;border-radius:50%;background:rgba(15,15,18,.9);color:#fff;font:700 21px Arial;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+#mt3-custom-panel{position:fixed;right:16px;top:70px;z-index:99999;width:min(390px,calc(100vw - 32px));max-height:calc(100vh - 86px);overflow:auto;display:none;background:rgba(18,18,22,.98);color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:16px;font:14px Arial;box-shadow:0 25px 70px rgba(0,0,0,.5)}
+#mt3-custom-panel.open{display:block}
+#mt3-custom-panel h3{margin:0;padding:16px;border-bottom:1px solid rgba(255,255,255,.08);font-size:18px}
+.mt3c-section{padding:15px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.mt3c-title{font-size:11px;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+#mt3c-lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.mt3c-lane{background:#28282e;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;padding:9px 5px;cursor:pointer}
+.mt3c-lane small{display:block;color:#999;font-size:10px;margin-bottom:5px}.mt3c-lane b{font-size:17px}
+#mt3c-status{color:#8bd6ff;font-size:12px;min-height:18px;margin-top:9px}
+.mt3c-row{display:flex;align-items:center;gap:12px}.mt3c-avatar{width:58px;height:58px;border-radius:50%;overflow:hidden;background:#29292f;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;flex:none}.mt3c-avatar img{width:100%;height:100%;object-fit:cover}
+.mt3c-btn{background:#28282e;color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:8px 11px;cursor:pointer;margin-top:8px}
+#mt3c-round{font-size:27px;font-weight:900}#mt3c-speed{color:#aaa;margin-top:5px;font-size:12px}#mt3c-round-status{color:#8bd6ff;font-size:12px;margin-top:8px}
+#mt3c-file{display:none}
+</style>
 </head>
 
 <body>
@@ -146,6 +163,43 @@
         });
       })();
     </script>
+
+<script>
+(function(){
+"use strict";
+var K="mt3c_lane_keys", P="mt3c_profile", laneKeys=loadKeys(), capture=-1, round=1, speed=1, locked=false, sceneId="";
+var engine=["f","g","h","j"];
+
+function loadKeys(){try{var x=JSON.parse(localStorage.getItem(K)||"null");if(Array.isArray(x)&&x.length===4)return x.map(String);}catch(e){}return ["f","g","h","j"];}
+function saveKeys(){localStorage.setItem(K,JSON.stringify(laneKeys));}
+function label(k){return k===" "?"SPACE":k.length===1?k.toUpperCase():k.toUpperCase();}
+function esc(s){return String(s).replace(/[&<>"']/g,function(x){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[x]});}
+function status(s){var e=document.getElementById("mt3c-status");if(e)e.textContent=s||"";}
+function renderLanes(){var r=document.getElementById("mt3c-lanes");if(!r)return;r.innerHTML="";for(var i=0;i<4;i++){var b=document.createElement("button");b.className="mt3c-lane";b.innerHTML="<small>LANE "+(i+1)+"</small><b>"+esc(label(laneKeys[i]))+"</b>";b.onclick=(function(n){return function(){capture=n;status("Press the new key for Lane "+(n+1)+"...");};})(i);r.appendChild(b);}}
+function evt(type,key){var e;try{e=new KeyboardEvent(type,{key:key,code:key.length===1?"Key"+key.toUpperCase():"",bubbles:true,cancelable:true});}catch(x){e=document.createEvent("Event");e.initEvent(type,true,true);}try{Object.defineProperty(e,"keyCode",{get:function(){return key.charCodeAt(0)}});Object.defineProperty(e,"which",{get:function(){return key.charCodeAt(0)}});}catch(x){}return e;}
+window.addEventListener("keydown",function(e){if(capture!==-1){if(!e.repeat){var k=String(e.key||"").toLowerCase();if(k){var d=laneKeys.indexOf(k);if(d!==-1&&d!==capture)laneKeys[d]=laneKeys[capture];laneKeys[capture]=k;saveKeys();renderLanes();status("Saved Lane "+(capture+1)+" as "+label(k));capture=-1;}}e.preventDefault();e.stopImmediatePropagation();return;}var k=String(e.key||"").toLowerCase(),n=laneKeys.indexOf(k);if(n!==-1&&k!==engine[n]){e.preventDefault();e.stopImmediatePropagation();var t=document.getElementById("GameCanvas")||document;t.dispatchEvent(evt("keydown",engine[n]));}},true);
+window.addEventListener("keyup",function(e){var k=String(e.key||"").toLowerCase(),n=laneKeys.indexOf(k);if(n!==-1&&k!==engine[n]){e.preventDefault();e.stopImmediatePropagation();var t=document.getElementById("GameCanvas")||document;t.dispatchEvent(evt("keyup",engine[n]));}},true);
+
+function profile(){try{return localStorage.getItem(P)||"";}catch(e){return"";}}
+function renderProfile(){var d=profile(),a=document.getElementById("mt3c-avatar");if(!a)return;a.innerHTML=d?"<img src='"+esc(d)+"'>":"NO IMAGE";}
+function upload(file){if(!file||!file.type.startsWith("image/"))return status("Choose an image file.");if(file.size>4194304)return status("Image must be 4 MB or smaller.");var r=new FileReader();r.onload=function(){localStorage.setItem(P,r.result);renderProfile();status("Profile image saved.");setTimeout(applyProfile,500);};r.readAsDataURL(file);}
+function scene(){try{return cc&&cc.director&&cc.director.getScene?cc.director.getScene():null;}catch(e){return null;}}
+function walk(n,fn,d){if(!n||d>35)return;fn(n);try{var c=n.children||[];for(var i=0;i<c.length;i++)walk(c[i],fn,d+1);}catch(e){}}
+function text(n){var s=String(n&&n.name||"");try{var c=n.components||[];for(var i=0;i<c.length;i++){if(c[i]&&typeof c[i].string==="string")s+=" "+c[i].string;if(c[i]&&typeof c[i].text==="string")s+=" "+c[i].text;if(c[i]&&typeof c[i].title==="string")s+=" "+c[i].title;}}catch(e){}return s.toLowerCase();}
+function find(words){var sc=scene(),out=null;if(!sc)return null;walk(sc,function(n){if(out)return;var t=text(n);for(var i=0;i<words.length;i++)if(t.indexOf(words[i])!==-1){out=n;break;}},0);return out;}
+function clickNode(n){if(!n)return false;var ok=false;try{if(n.emit){n.emit("click");ok=true;}}catch(e){}try{var c=n.components||[];for(var i=0;i<c.length;i++){if(c[i]&&typeof c[i].click==="function"){c[i].click();ok=true;}if(c[i]&&typeof c[i].onClick==="function"){c[i].onClick();ok=true;}}}catch(e){}return ok;}
+function setSpeed(){try{var s=cc.director.getScheduler();if(s&&s.setTimeScale)s.setTimeScale(speed);}catch(e){}var x=document.getElementById("mt3c-speed");if(x)x.textContent="Speed "+speed.toFixed(2)+"×";}
+function nextRound(){if(locked)return;locked=true;round++;speed=Math.min(3,1+(round-1)*.08);document.getElementById("mt3c-round").textContent="Round "+round;setSpeed();document.getElementById("mt3c-round-status").textContent="Round "+round+" — faster";var b=find(["continue","next level","nextlevel","play again","playagain","replay","retry","restart","again"]);if(b)setTimeout(function(){clickNode(b);setTimeout(applyProfile,500);},600);else setTimeout(function(){var q=find(["play","start","continue","next","replay","restart"]);if(q)clickNode(q);locked=false;},1100);}
+function monitor(){var sc=scene();if(sc){var id=String(sc.uuid||sc.name||"");if(id!==sceneId){sceneId=id;locked=false;}var done=find(["level complete","level completed","song complete","song completed","completed","success","victory","you win"]);if(done&&!locked)setTimeout(nextRound,450);}requestAnimationFrame(monitor);}
+function applyProfile(){var d=profile();if(!d)return;var sc=scene();if(!sc)return;var im=new Image();im.onload=function(){try{var ia=new cc.ImageAsset();if(ia.reset)ia.reset(im);var tex=new cc.Texture2D();tex.image=ia;var fr=new cc.SpriteFrame();fr.texture=tex;walk(sc,function(n){var t=text(n).replace(/[ _-]/g,"");if(!/(avatar|profile|usericon|playericon)/.test(t))return;try{var s=n.getComponent(cc.Sprite)||n.getComponent("cc.Sprite");if(s)s.spriteFrame=fr;}catch(e){}},0);}catch(e){}};im.src=d;}
+
+document.addEventListener("DOMContentLoaded",function(){
+var b=document.createElement("button");b.id="mt3-custom-settings";b.textContent="⚙";document.body.appendChild(b);
+var p=document.createElement("div");p.id="mt3-custom-panel";p.innerHTML='<h3>Magic Tiles Settings</h3><div class="mt3c-section"><div class="mt3c-title">Lane Hotkeys</div><div id="mt3c-lanes"></div><div id="mt3c-status"></div></div><div class="mt3c-section"><div class="mt3c-title">Profile Image</div><div class="mt3c-row"><div class="mt3c-avatar" id="mt3c-avatar">NO IMAGE</div><div><div>Use your own profile image</div><button class="mt3c-btn" id="mt3c-upload">Choose image</button><button class="mt3c-btn" id="mt3c-remove">Remove</button><input id="mt3c-file" type="file" accept="image/*"></div></div></div><div class="mt3c-section"><div class="mt3c-title">Endless Mode</div><div id="mt3c-round">Round 1</div><div id="mt3c-speed">Speed 1.00×</div><div id="mt3c-round-status"></div></div>';document.body.appendChild(p);
+b.onclick=function(){p.classList.toggle("open");};document.getElementById("mt3c-upload").onclick=function(){document.getElementById("mt3c-file").click();};document.getElementById("mt3c-file").onchange=function(){upload(this.files[0]);this.value="";};document.getElementById("mt3c-remove").onclick=function(){localStorage.removeItem(P);renderProfile();status("Profile image removed.");};renderLanes();renderProfile();setSpeed();monitor();setTimeout(applyProfile,1500);
+});
+})();
+</script>
 </body>
 
 </html>
